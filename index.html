@@ -37,7 +37,7 @@ textarea{min-height:120px;resize:vertical}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:1000px){.grid2{grid-template-columns:1fr}}
 .stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px}
-canvas{background:radial-gradient(circle at 50% 40%,#fff,#eef1f8);border-radius:50%;border:6px solid #c9d2e6;box-shadow:inset 0 0 20px rgba(0,0,0,.08)}
+canvas{width:300px;height:406px;max-width:100%}
 .status{font-size:14px;color:var(--mut);min-height:20px;text-align:center}
 .ballot{border:2px solid #222;border-radius:6px;background:#fffdf7;padding:0;overflow:hidden}
 .ballot .hd{background:#222;color:#fff;padding:8px 12px;font-size:13px;font-weight:600;letter-spacing:.04em}
@@ -64,7 +64,7 @@ body.pres header .sub{display:none}
 body.pres .wrap{grid-template-columns:1fr;max-width:1600px}
 body.pres .grid2{grid-template-columns:460px 1fr;align-items:start}
 body.pres .ballotWrap{grid-column:auto}
-body.pres canvas{width:440px;height:440px}
+body.pres canvas{width:370px;height:500px}
 body.pres .status{font-size:20px;color:var(--ink)}
 body.pres #go{font-size:22px;padding:14px 28px}
 body.pres .ballot .it{padding:13px 18px}
@@ -73,7 +73,23 @@ body.pres .ballot .it .pos{width:46px;height:46px;font-size:22px}
 body.pres .ballot .it .bn{font-size:14px}
 body.pres .ballot .hd{font-size:16px;padding:12px 18px}
 body.pres .zt{font-size:30px;text-transform:none;letter-spacing:0;color:var(--ink)}
-@media(max-width:1000px){body.pres .grid2{grid-template-columns:1fr}body.pres canvas{width:300px;height:300px}}
+@media(max-width:1000px){body.pres .grid2{grid-template-columns:1fr}body.pres canvas{width:300px;height:406px}}
+.exrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+#printArea{display:none}
+@media print{
+  body>*:not(#printArea){display:none!important}
+  body{background:#fff}
+  #printArea{display:block}
+  .pcard{page-break-after:always;border:4px solid #222;margin:0 auto;max-width:640px}
+  .pcard:last-child{page-break-after:auto}
+  .pcard .phd{background:#222;color:#fff;text-align:center;font-weight:700;font-size:20px;padding:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pcard h1{text-align:center;font-size:30px;margin:18px 0}
+  .pcard .pr{display:flex;align-items:center;gap:14px;padding:12px 18px;border-top:1px solid #bbb;font-size:22px}
+  .pcard .pr b{width:38px;height:38px;border-radius:50%;background:#1f4fa3;color:#fff;display:grid;place-items:center;font-size:18px;-webkit-print-color-adjust:exact;print-color-adjust:exact;flex:none}
+  .pcard .pr.bl{font-style:italic;color:#555}
+  .pcard .pr.bl b{background:#888}
+  .pcard .pft{font-size:11px;color:#555;padding:12px 18px;border-top:1px solid #bbb;word-break:break-all}
+}
 </style>
 </head>
 <body>
@@ -114,6 +130,7 @@ body.pres .zt{font-size:30px;text-transform:none;letter-spacing:0;color:var(--in
   </main>
 </div>
 
+<div id="printArea"></div>
 <div class="ov" id="ov"><div class="box" id="ovBox"></div></div>
 
 <script>
@@ -176,11 +193,13 @@ function renderPanel(){
       <canvas id="drum" width="300" height="300"></canvas>
       <div class="status" id="status">${locked?'Sorteo realizado ✔ · siguiente zona con el botón →':(z.cands.length?'Listo para sortear.':'Agrega candidatos para comenzar.')}</div>
       <button id="go" class="pri" ${locked||!z.cands.length||busy?'disabled':''}>🎱 Sortear esta zona</button>
+      <label class="note"><input type="checkbox" id="snd" ${SOUND?'checked':''}> Sonido</label>
     </div>
     <div class="ballotWrap">
       <h2>Tarjeta electoral</h2>
       <div class="ballot" id="ballot"></div>
-      ${locked?`<div class="note">Huella: <code>${z.result.hash.slice(0,32)}…</code> · ${new Date(z.result.ts).toLocaleString('es-CO')}</div>`:''}
+      ${locked?`<div class="note">Huella: <code>${z.result.hash.slice(0,32)}…</code> · ${new Date(z.result.ts).toLocaleString('es-CO')}</div>
+      <div class="exrow"><button id="exPng" class="sm">🖼 Descargar tarjeta (PNG)</button><button id="exPrint" class="sm">🖨 Imprimir / guardar PDF</button><span id="exMsg" class="note"></span></div>`:''}
     </div>
   </div>`;
   renderBallot(z.result?z.result.order:[],z.result?z.cands.length:0);
@@ -188,6 +207,9 @@ function renderPanel(){
     const arr=[...new Set($('cands').value.split('\n').map(s=>s.trim()).filter(Boolean))];
     z.cands=arr;save();renderAll()});
   $('go')&&($('go').onclick=()=>{const t=$('cands');if(t)z.cands=[...new Set(t.value.split('\n').map(x=>x.trim()).filter(Boolean))];save();runZone(z)});
+  $('exPng')&&($('exPng').onclick=()=>exportPng(z));
+  $('exPrint')&&($('exPrint').onclick=()=>printCards([z]));
+  $('snd').onchange=e=>{SOUND=e.target.checked;if(!SOUND)airSnd(0)};
   $('prevZ').onclick=()=>navZone(-1);$('nextZ').onclick=()=>navZone(1);
   $('annul')&&($('annul').onclick=()=>{
     $('annulBox').innerHTML='<input type="text" id="why" placeholder="Motivo de la anulación (queda en el registro)" style="margin-top:8px"><button id="okAnnul" class="sm" style="margin-top:6px">Confirmar anulación</button>';
@@ -205,39 +227,179 @@ function renderBallot(order,n){
     (order.length===n?`<div class="it blank"><span class="pos">${n+1}</span><span class="nm">Voto en Blanco</span><span class="bn">posición fija</span></div>`:'');
 }
 
-// ---------- balotera (canvas) ----------
-let balls=[],raf=0,speed=1.5,hl=-1;
-const HUES=[210,0,45,140,280,25,170,330];
+// ---------- balotera (canvas, física + render) ----------
+const W=340,H=460,CX=170,CY=300,R=135,MOUTH=CY-R,TUBE_TOP=92,WIN_Y=38;
+const HUES=[212,2,44,142,282,24,172,330];
+let SOUND=true,AC=null,AIR=null;
+let sim={balls:[],air:0,job:null,r:16,tw:19},raf=0;
+
+// sonido (opcional): aire de la máquina y campanita al salir la balota
+function audioInit(){
+  if(!SOUND)return;
+  try{
+    if(!AC){
+      AC=new (window.AudioContext||window.webkitAudioContext)();
+      const len=AC.sampleRate*2,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
+      for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+      const src=AC.createBufferSource();src.buffer=buf;src.loop=true;
+      const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=650;f.Q.value=.6;
+      const g=AC.createGain();g.gain.value=0;
+      src.connect(f);f.connect(g);g.connect(AC.destination);src.start();AIR=g;
+    }
+    if(AC.state==='suspended')AC.resume();
+  }catch(e){}
+}
+function airSnd(l){try{AIR&&AIR.gain.setTargetAtTime(SOUND?l*.12:0,AC.currentTime,.15)}catch(e){}}
+function ding(){
+  try{if(!SOUND||!AC)return;
+    const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;
+    o.type='sine';o.frequency.value=988;
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.8);
+    o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+.85);
+  }catch(e){}
+}
+
 function initDrum(n){
   cancelAnimationFrame(raf);
   const c=$('drum');if(!c)return;
-  const R=150,r=n>40?9:n>20?12:16;
-  balls=[...Array(n)].map((_,i)=>{const a=Math.random()*6.28,d=Math.random()*(R-r-6);
-    return{n:i+1,x:R+Math.cos(a)*d,y:R+Math.sin(a)*d,vx:(Math.random()-.5)*3,vy:(Math.random()-.5)*3,r,h:HUES[i%HUES.length]}});
-  hl=-1;
-  const ctx=c.getContext('2d');
-  (function loop(){
-    ctx.clearRect(0,0,300,300);
-    for(const b of balls){
-      b.vx+=(Math.random()-.5)*.25*speed;b.vy+=(Math.random()-.5)*.25*speed+.03;
-      const v=Math.hypot(b.vx,b.vy),t=2.2*speed;if(v>t){b.vx*=t/v;b.vy*=t/v}
-      b.x+=b.vx*speed;b.y+=b.vy*speed;
-      const dx=b.x-R,dy=b.y-R,d=Math.hypot(dx,dy);
-      if(d+b.r>R-2){const nx=dx/d,ny=dy/d,dot=b.vx*nx+b.vy*ny;b.vx-=2*dot*nx;b.vy-=2*dot*ny;b.x=R+nx*(R-2-b.r);b.y=R+ny*(R-2-b.r)}
-    }
-    // separación simple entre balotas
-    for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
-      const a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),m=a.r+b.r;
-      if(d>0&&d<m){const p=(m-d)/2,nx=dx/d,ny=dy/d;a.x-=nx*p;a.y-=ny*p;b.x+=nx*p;b.y+=ny*p;[a.vx,b.vx]=[b.vx,a.vx];[a.vy,b.vy]=[b.vy,a.vy]}}
-    for(const b of balls){
-      ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,6.283);
-      ctx.fillStyle=`hsl(${b.h} 70% 52%)`;ctx.fill();
-      ctx.lineWidth=b.n===hl?4:1.5;ctx.strokeStyle=b.n===hl?'#111':'#fff';ctx.stroke();
-      ctx.fillStyle='#fff';ctx.font=`bold ${Math.max(9,b.r-3)}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(b.n,b.x,b.y+1);
-    }
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  c.width=W*dpr;c.height=H*dpr;
+  const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
+  const r=n>40?10:n>25?13:n>12?16:n>6?21:25;
+  sim={balls:[],air:0,job:null,r,tw:r+3};
+  for(let i=0;i<n;i++){
+    const a=Math.random()*6.2832,d=Math.random()*(R*.6);
+    sim.balls.push({n:i+1,x:CX+Math.cos(a)*d,y:CY-R*.15+Math.sin(a)*d*.8,vx:(Math.random()-.5)*2,vy:0,h:HUES[i%HUES.length],r,ang:Math.random()*6.28,av:0,st:'free',dr:r});
+  }
+  airSnd(0);
+  let last=performance.now(),acc=0;
+  (function loop(now){
+    acc+=Math.min(50,now-last);last=now;
+    while(acc>=16.667){step(now);acc-=16.667}
+    draw(ctx);
     raf=requestAnimationFrame(loop);
-  })();
+  })(last);
+}
+
+function wallHit(b,openOK){
+  const dx=b.x-CX,dy=b.y-CY,d=Math.hypot(dx,dy);
+  if(d+b.r<=R||d===0)return;
+  if(openOK&&dy<0&&Math.abs(dx)<sim.tw-2)return;
+  const nx=dx/d,ny=dy/d;
+  b.x=CX+nx*(R-b.r);b.y=CY+ny*(R-b.r);
+  const vn=b.vx*nx+b.vy*ny;
+  if(vn>0){b.vx-=1.82*vn*nx;b.vy-=1.82*vn*ny}
+  const vt=-b.vx*ny+b.vy*nx;b.av+=vt*.01;
+}
+function step(now){
+  const J=sim.job,B=sim.balls;
+  if(J){
+    if(J.ph==='mix'&&now-J.t0>=J.mixMs){
+      const b=B.find(x=>x.n===J.num);
+      if(b){b.st='chosen';J.ph='pick';J.t0=now;sim.air=.6;airSnd(.6)}
+      else{J.ph='show';J.t0=now}
+    }
+  }
+  for(const b of B){
+    if(b.st==='free'){
+      b.vy+=.2;
+      if(sim.air>0&&b.y>CY-R*.15){ // chorro de aire desde abajo
+        b.vy-=sim.air*(.35+Math.random()*.75);
+        b.vx+=(Math.random()-.5)*sim.air*.9+(CX-b.x)*.0007*sim.air;
+      }
+      const v=Math.hypot(b.vx,b.vy);if(v>9){b.vx*=9/v;b.vy*=9/v}
+      b.x+=b.vx;b.y+=b.vy;b.vx*=.997;b.vy*=.997;
+      wallHit(b,false);
+    }else if(b.st==='chosen'){
+      const t=now-J.t0,dx=CX-b.x,dy=MOUTH+2-b.y,d=Math.hypot(dx,dy)||1,pull=.1+.00012*t;
+      b.vx+=dx/d*pull;b.vy+=dy/d*pull;b.vx*=.97;b.vy*=.97;
+      b.x+=b.vx;b.y+=b.vy;wallHit(b,true);
+      if(b.y<MOUTH+b.r*.5&&Math.abs(b.x-CX)<7){b.st='tube';J.ph='tube';sim.air=.3;airSnd(.3)}
+    }else if(b.st==='tube'){
+      b.x+=(CX-b.x)*.25;b.y-=2.8;b.av*=.8;
+      if(b.y<=TUBE_TOP){b.st='show';J.ph='show';J.t0=now;sim.air=0;airSnd(0);ding()}
+    }else if(b.st==='show'){
+      const p=Math.min(1,(now-J.t0)/450);
+      b.x=CX;b.y=TUBE_TOP+(WIN_Y-TUBE_TOP)*p;b.dr=b.r+(30-b.r)*p;
+      if(now-J.t0>J.hold){sim.balls=sim.balls.filter(x=>x!==b);const res=J.res;sim.job=null;res();return}
+    }
+    if(b.st==='free'||b.st==='chosen'){b.ang+=b.vx/b.r*.6+b.av;b.av*=.99}
+    else b.ang*=.85;
+    if(b.st!=='free'&&b.st!=='chosen')b.ang=b.ang%6.2832*.85;
+  }
+  // choques entre balotas (la elegida los ignora si ya lleva mucho tiempo)
+  for(let k=0;k<2;k++)for(let i=0;i<B.length;i++){
+    const a=B[i];if(a.st==='tube'||a.st==='show')continue;
+    for(let j=i+1;j<B.length;j++){
+      const c=B[j];if(c.st==='tube'||c.st==='show')continue;
+      if((a.st==='chosen'||c.st==='chosen')&&J&&now-J.t0>1500)continue;
+      const dx=c.x-a.x,dy=c.y-a.y,d=Math.hypot(dx,dy),m=a.r+c.r;
+      if(d<m&&d>.001){
+        const nx=dx/d,ny=dy/d,p=(m-d)/2;
+        a.x-=nx*p;a.y-=ny*p;c.x+=nx*p;c.y+=ny*p;
+        const vn=(c.vx-a.vx)*nx+(c.vy-a.vy)*ny;
+        if(vn<0){const j2=-(1+.88)*vn/2;a.vx-=j2*nx;a.vy-=j2*ny;c.vx+=j2*nx;c.vy+=j2*ny}
+      }
+    }
+  }
+}
+
+function drawBall(ctx,x,y,r,h,num,ang){
+  ctx.save();ctx.translate(x,y);
+  let g=ctx.createRadialGradient(-r*.35,-r*.4,r*.1,0,0,r);
+  g.addColorStop(0,`hsl(${h} 85% 68%)`);g.addColorStop(.55,`hsl(${h} 80% 48%)`);g.addColorStop(1,`hsl(${h} 75% 25%)`);
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,r,0,6.2832);ctx.fill();
+  ctx.rotate(ang);
+  ctx.fillStyle='rgba(255,255,255,.96)';ctx.beginPath();ctx.arc(0,0,r*.56,0,6.2832);ctx.fill();
+  ctx.fillStyle='#1a1a1a';ctx.font=`bold ${Math.round(r*(num>9?.55:.72))}px system-ui,sans-serif`;
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(num,0,r*.04);
+  if(num%10===6||num%10===9){ctx.fillRect(-r*.2,r*.32,r*.4,Math.max(1,r*.06))}
+  ctx.rotate(-ang);
+  g=ctx.createRadialGradient(-r*.4,-r*.44,0,-r*.4,-r*.44,r*.5);
+  g.addColorStop(0,'rgba(255,255,255,.85)');g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,r,0,6.2832);ctx.fill();
+  ctx.restore();
+}
+function rrect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function draw(ctx){
+  const tw=sim.tw;
+  ctx.clearRect(0,0,W,H);
+  // pedestal
+  let g=ctx.createLinearGradient(0,H-60,0,H);g.addColorStop(0,'#8a92a6');g.addColorStop(1,'#343a49');
+  ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(CX-92,CY+R-12);ctx.lineTo(CX+92,CY+R-12);ctx.lineTo(CX+125,H-4);ctx.lineTo(CX-125,H-4);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.25)';ctx.fillRect(CX-92,CY+R-12,184,3);
+  // visor superior
+  g=ctx.createLinearGradient(0,4,0,72);g.addColorStop(0,'#f8faff');g.addColorStop(1,'#dfe6f4');
+  ctx.fillStyle=g;ctx.strokeStyle='#8f9cb8';ctx.lineWidth=3;rrect(ctx,CX-54,4,108,68,14);ctx.fill();ctx.stroke();
+  // tubo
+  ctx.fillStyle='rgba(205,220,245,.45)';ctx.fillRect(CX-tw,72,tw*2,MOUTH-70);
+  ctx.strokeStyle='rgba(110,140,190,.9)';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(CX-tw,72);ctx.lineTo(CX-tw,MOUTH+2);ctx.moveTo(CX+tw,72);ctx.lineTo(CX+tw,MOUTH+2);ctx.stroke();
+  // fondo de la esfera
+  g=ctx.createRadialGradient(CX-30,CY-40,10,CX,CY,R);g.addColorStop(0,'#fbfcff');g.addColorStop(1,'#dde5f5');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(CX,CY,R,0,6.2832);ctx.fill();
+  // boquillas de aire
+  ctx.fillStyle='#7d8699';for(let i=-2;i<=2;i++){ctx.beginPath();ctx.ellipse(CX+i*26,CY+R-9,9,3.5,0,0,6.2832);ctx.fill()}
+  // balotas (la que va en el tubo/visor se dibuja al final)
+  const top=sim.balls.filter(b=>b.st==='tube'||b.st==='show');
+  for(const b of sim.balls)if(b.st==='free'||b.st==='chosen')drawBall(ctx,b.x,b.y,b.r,b.h,b.n,b.ang);
+  for(const b of top)drawBall(ctx,b.x,b.y,b.st==='show'?b.dr:b.r,b.h,b.n,0);
+  // vidrio al frente
+  g=ctx.createRadialGradient(CX,CY,R*.7,CX,CY,R);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(1,'rgba(150,180,225,.35)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(CX,CY,R,0,6.2832);ctx.fill();
+  const ga=Math.asin(tw/R);
+  ctx.strokeStyle='rgba(95,125,180,.9)';ctx.lineWidth=4;
+  ctx.beginPath();ctx.arc(CX,CY,R,-Math.PI/2+ga,-Math.PI/2-ga+6.2832);ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=7;ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(CX,CY,R-11,Math.PI*1.07,Math.PI*1.33);ctx.stroke();
+  ctx.lineWidth=4;ctx.beginPath();ctx.arc(CX,CY,R-11,Math.PI*.2,Math.PI*.3);ctx.stroke();ctx.lineCap='butt';
+}
+// anima un sorteo: mezcla, sube la balota elegida por el tubo y la muestra en el visor
+function drawOne(num,quiet,first){
+  return new Promise(res=>{
+    sim.job={num,ph:'mix',t0:performance.now(),mixMs:quiet?700:(first?3800:2800),hold:quiet?300:1400,res};
+    sim.air=1;airSnd(1);
+  });
 }
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -249,15 +411,14 @@ async function runZone(z,quiet){
   const pool=z.cands.map((name,i)=>({name,ball:i+1}));
   const order=[];
   renderBallot([],z.cands.length);
+  audioInit();
   while(pool.length){
     st.textContent=`Mezclando balotas… (posición ${order.length+1} de ${z.cands.length})`;
-    speed=3.2;await wait(quiet?500:1600);
-    const pick=pool.splice(rnd(pool.length),1)[0];
-    speed=.5;hl=pick.ball;st.textContent=`Salió la balota #${pick.ball}`;
-    await wait(quiet?300:1000);
-    balls=balls.filter(b=>b.n!==pick.ball);hl=-1;
-    order.push(pick);renderBallot(order,z.cands.length);speed=1.5;
-    await wait(quiet?150:500);
+    const pick=pool.splice(rnd(pool.length),1)[0]; // el azar lo decide el generador criptográfico
+    await drawOne(pick.ball,quiet,order.length===0);
+    st.textContent=`Salió la balota #${pick.ball}`;
+    order.push(pick);renderBallot(order,z.cands.length);
+    await wait(quiet?150:600);
   }
   const ts=new Date().toISOString();
   const prev=S.log.length?S.log[S.log.length-1].hash:'GENESIS';
@@ -299,9 +460,48 @@ $('demo').onclick=()=>{
   for(const k in d){const z=S.zones.find(x=>x.name===k);if(z&&!z.result)z.cands=[...Array(d[k])].map((_,i)=>`Candidato de prueba ${i+1}`)}
   save();renderAll()};
 $('btnAll').onclick=async()=>{
-  if(busy)return;
+  if(busy)return;audioInit();
   for(const z of S.zones){if(!z.result&&z.cands.length){S.sel=z.id;save();renderAll();await wait(200);await runZone(z,true)}}
   renderAll()};
+function cardCanvas(z){
+  const order=z.result.order,n=order.length+1,rowH=66,top=150,CW=900,CH=top+n*rowH+96,k=2;
+  const c=document.createElement('canvas');c.width=CW*k;c.height=CH*k;
+  const x=c.getContext('2d');x.scale(k,k);
+  x.fillStyle='#fffdf7';x.fillRect(0,0,CW,CH);
+  x.strokeStyle='#222';x.lineWidth=5;x.strokeRect(10,10,CW-20,CH-20);
+  x.fillStyle='#222';x.fillRect(10,10,CW-20,58);
+  x.fillStyle='#fff';x.font='bold 26px system-ui,sans-serif';x.textAlign='center';x.textBaseline='middle';
+  x.fillText('TARJETA ELECTORAL – CABILDO MAYOR',CW/2,40);
+  x.fillStyle='#1d2433';x.font='bold 38px system-ui,sans-serif';x.fillText(z.name,CW/2,108);
+  const rows=order.map(o=>o.name).concat(['Voto en Blanco']);
+  rows.forEach((nm,i)=>{
+    const y=top+i*rowH,blank=i===rows.length-1;
+    x.strokeStyle='#bbb';x.lineWidth=1.5;x.beginPath();x.moveTo(10,y);x.lineTo(CW-10,y);x.stroke();
+    x.fillStyle=blank?'#8a8f9c':'#1f4fa3';x.beginPath();x.arc(66,y+rowH/2,23,0,6.2832);x.fill();
+    x.fillStyle='#fff';x.font='bold 24px system-ui,sans-serif';x.textAlign='center';x.fillText(i+1,66,y+rowH/2+1);
+    let fs=30;x.textAlign='left';
+    do{x.font=`${blank?'italic ':''}${fs}px system-ui,sans-serif`;fs-=2}while(x.measureText(nm).width>CW-190&&fs>12);
+    x.fillStyle=blank?'#555':'#1d2433';x.fillText(nm,112,y+rowH/2+1);
+  });
+  const yb=top+n*rowH;
+  x.strokeStyle='#bbb';x.beginPath();x.moveTo(10,yb);x.lineTo(CW-10,yb);x.stroke();
+  x.fillStyle='#555';x.font='15px system-ui,sans-serif';x.textAlign='left';
+  x.fillText('Orden definido por sorteo público · '+new Date(z.result.ts).toLocaleString('es-CO'),30,yb+30);
+  x.font='12px ui-monospace,monospace';x.fillText('huella '+z.result.hash.slice(0,48)+'…',30,yb+56);
+  return c;
+}
+function exportPng(z){
+  const slug=z.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').toLowerCase();
+  cardCanvas(z).toBlob(b=>saveFile(`tarjeta-${slug}.png`,b),'image/png');
+}
+function printCards(zs){
+  if(!zs.length)return;
+  $('printArea').innerHTML=zs.map(z=>`<div class="pcard"><div class="phd">TARJETA ELECTORAL – CABILDO MAYOR</div><h1>${esc(z.name)}</h1>`+
+    z.result.order.map((o,i)=>`<div class="pr"><b>${i+1}</b><span>${esc(o.name)}</span></div>`).join('')+
+    `<div class="pr bl"><b>${z.result.order.length+1}</b><span>Voto en Blanco</span></div>`+
+    `<div class="pft">Orden definido por sorteo público · ${new Date(z.result.ts).toLocaleString('es-CO')}<br>huella ${z.result.hash}</div></div>`).join('');
+  try{window.print()}catch(e){}
+}
 function navZone(d){if(busy)return;const i=S.zones.findIndex(z=>z.id===S.sel)+d;if(i<0||i>=S.zones.length)return;S.sel=S.zones[i].id;save();renderAll()}
 let DL=null;
 try{window.claude&&window.claude.use('downloads').then(d=>{DL=d}).catch(()=>{})}catch(e){}
@@ -326,9 +526,9 @@ function buildCsv(){
 }
 const buildBackup=()=>JSON.stringify({app:'sorteo-cabildo',v:1,saved:new Date().toISOString(),state:S},null,1);
 async function saveFile(name,data){
-  const m=$('svMsg');
+  const m=$('svMsg')||$('exMsg')||{};
   if(!DL){ // fuera de Claude (p. ej. GitHub Pages): descarga normal del navegador
-    try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'text/plain;charset=utf-8'}));a.download=name;document.body.appendChild(a);a.click();a.remove();m.textContent='Descargado ✔ '+name}
+    try{const a=document.createElement('a');a.href=URL.createObjectURL((data instanceof Blob?data:new Blob([data],{type:'text/plain;charset=utf-8'})));a.download=name;document.body.appendChild(a);a.click();a.remove();m.textContent='Descargado ✔ '+name}
     catch(e){m.textContent='No se pudo descargar; usa «Copiar acta».'}
     return}
   try{await DL.save({filename:name,data});m.textContent='Guardado ✔ '+name}
@@ -337,7 +537,7 @@ async function saveFile(name,data){
 function openSave(){
   const txt=buildActa();
   $('ovBox').innerHTML=`<h2 style="margin-top:0">Guardar resultados</h2>
-  <div class="row"><button id="sA" class="pri">Acta (.txt)</button><button id="sC">Tabla (.csv · Excel)</button><button id="sB">Respaldo (.json)</button><button id="sCp">Copiar acta</button></div>
+  <div class="row"><button id="sA" class="pri">Acta (.txt)</button><button id="sC">Tabla (.csv · Excel)</button><button id="sB">Respaldo (.json)</button><button id="sCp">Copiar acta</button><button id="sPr">🖨 Imprimir todas las tarjetas / PDF</button></div>
   <div id="svMsg" class="note" style="margin:8px 0">El respaldo .json permite recuperar todo (candidatos, resultados y registro) si se pierde el navegador.</div>
   <textarea id="actaT" readonly style="min-height:220px">${esc(txt)}</textarea>
   <details><summary>Cargar un respaldo anterior</summary><input type="file" id="fRest" accept=".json,application/json"><div id="restMsg" class="note"></div></details>
@@ -347,6 +547,7 @@ function openSave(){
   $('sA').onclick=()=>saveFile(`acta-sorteo-cabildo-${fecha()}.txt`,buildActa());
   $('sC').onclick=()=>saveFile(`sorteo-cabildo-${fecha()}.csv`,buildCsv());
   $('sB').onclick=()=>saveFile(`respaldo-sorteo-cabildo-${fecha()}.json`,buildBackup());
+  $('sPr').onclick=()=>{$('ov').classList.remove('on');printCards(S.zones.filter(z=>z.result))};
   $('sCp').onclick=async()=>{try{await navigator.clipboard.writeText(txt);$('svMsg').textContent='Copiado ✔'}catch(e){$('actaT').select();$('svMsg').textContent='Selecciona y copia con Ctrl+C'}};
   $('fRest').onchange=async ev=>{
     const f=ev.target.files[0];if(!f)return;
