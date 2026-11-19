@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sorteo de Tarjeta Electoral – Cabildo Mayor</title>
+<style>
+:root{--bg:#f5f3ee;--card:#fff;--ink:#1d2433;--mut:#6b7385;--line:#e2ded3;--pri:#1f4fa3;--pri2:#163a78;--ok:#1d7a4d;--warn:#b4570a;--blank:#8a8f9c}
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--pri2);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;font-weight:650}
+header .sub{font-size:13px;opacity:.8}
+header .sp{flex:1}
+.wrap{display:grid;grid-template-columns:270px 1fr;gap:16px;padding:16px;max-width:1300px;margin:0 auto}
+@media(max-width:860px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h2{font-size:14px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;color:var(--ink)}
+button:hover{background:#f0eee8}
+button.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:600}
+button.pri:hover{background:var(--pri2)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.sm{padding:4px 8px;font-size:12px}
+.zlist{display:flex;flex-direction:column;gap:4px;max-height:62vh;overflow:auto}
+.z{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;border:1px solid transparent;font-size:14px}
+.z:hover{background:#f3f1ea}
+.z.sel{background:#e8eefb;border-color:#b8c8ea}
+.z .n{margin-left:auto;font-size:12px;color:var(--mut)}
+.dot{width:10px;height:10px;border-radius:50%;background:#cfcabb;flex:none}
+.dot.done{background:var(--ok)}
+.dot.ready{background:#d9a21b}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+textarea,input[type=text]{font:inherit;color:#1d2433;-webkit-text-fill-color:#1d2433;caret-color:#1d2433;width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+textarea{min-height:120px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px}
+canvas{background:radial-gradient(circle at 50% 40%,#fff,#eef1f8);border-radius:50%;border:6px solid #c9d2e6;box-shadow:inset 0 0 20px rgba(0,0,0,.08)}
+.status{font-size:14px;color:var(--mut);min-height:20px;text-align:center}
+.ballot{border:2px solid #222;border-radius:6px;background:#fffdf7;padding:0;overflow:hidden}
+.ballot .hd{background:#222;color:#fff;padding:8px 12px;font-size:13px;font-weight:600;letter-spacing:.04em}
+.ballot .it{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid #ddd;animation:pop .45s ease}
+.ballot .it .pos{width:30px;height:30px;border-radius:50%;background:var(--pri);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;flex:none}
+.ballot .it .nm{flex:1;font-size:15px}
+.ballot .it .bn{font-size:12px;color:var(--mut)}
+.ballot .it.blank .pos{background:var(--blank)}
+.ballot .it.blank{background:#f1f1f1;font-style:italic}
+.ballot .empty{padding:18px;color:var(--mut);text-align:center;font-size:14px}
+@keyframes pop{from{transform:scale(.9);opacity:0;background:#fff3c4}to{transform:none;opacity:1}}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:#eef;color:var(--pri)}
+.tag.ok{background:#e1f4ea;color:var(--ok)}
+.log{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#10141f;color:#cfe3ff;border-radius:8px;padding:10px;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+.note{font-size:12px;color:var(--mut);margin-top:6px;line-height:1.45}
+details summary{cursor:pointer;font-size:13px;color:var(--pri);margin:6px 0}
+.warn{color:var(--warn)}
+.ov{position:fixed;inset:0;background:rgba(10,15,30,.55);display:none;place-items:center;z-index:9}
+.ov.on{display:grid}
+.ov .box{background:#fff;border-radius:12px;padding:18px;width:min(560px,92vw);max-height:86vh;overflow:auto}
+.ballotWrap{grid-column:1/-1}
+body.pres aside,body.pres #auditCard,body.pres .editcol{display:none}
+body.pres header .sub{display:none}
+body.pres .wrap{grid-template-columns:1fr;max-width:1600px}
+body.pres .grid2{grid-template-columns:460px 1fr;align-items:start}
+body.pres .ballotWrap{grid-column:auto}
+body.pres canvas{width:440px;height:440px}
+body.pres .status{font-size:20px;color:var(--ink)}
+body.pres #go{font-size:22px;padding:14px 28px}
+body.pres .ballot .it{padding:13px 18px}
+body.pres .ballot .it .nm{font-size:28px}
+body.pres .ballot .it .pos{width:46px;height:46px;font-size:22px}
+body.pres .ballot .it .bn{font-size:14px}
+body.pres .ballot .hd{font-size:16px;padding:12px 18px}
+body.pres .zt{font-size:30px;text-transform:none;letter-spacing:0;color:var(--ink)}
+@media(max-width:1000px){body.pres .grid2{grid-template-columns:1fr}body.pres canvas{width:300px;height:300px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Sorteo del orden de la Tarjeta Electoral</h1>
+  <span class="sub">Cabildo Mayor de Personas Mayores · por comuna y corregimiento</span>
+  <span class="sp"></span>
+  <span class="sub">Autoguardado en este navegador</span><button id="btnPres">🖥 Modo proyección</button><button id="btnSave" class="pri">💾 Guardar</button>
+</header>
+
+<div class="wrap">
+  <aside class="card">
+    <h2>Comunas y corregimientos</h2>
+    <div class="zlist" id="zlist"></div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="newZone" placeholder="Agregar zona…" style="flex:1">
+      <button id="addZone" class="sm">+</button>
+    </div>
+    <details>
+      <summary>Importar candidatos (masivo)</summary>
+      <textarea id="bulk" placeholder="Una línea por candidato:&#10;Zona;Nombre del candidato&#10;Popular;Ana Pérez&#10;Popular;Luis Gómez"></textarea>
+      <div class="row" style="margin-top:6px"><button id="doBulk" class="sm">Importar</button><button id="demo" class="sm">Cargar datos de prueba</button><button id="btnAll" class="sm" title="Sortea de una vez todas las zonas con candidatos (animación corta)">Sortear todas</button></div>
+      <div class="note">Si pegas aquí la lista que ya extraes de los PDF por comuna, se llena todo de una vez.</div>
+    </details>
+  </aside>
+
+  <main style="display:flex;flex-direction:column;gap:16px">
+    <section class="card" id="panel"></section>
+    <section class="card" id="auditCard">
+      <h2>Registro de auditoría</h2>
+      <div class="log" id="log">Sin sorteos todavía.</div>
+      <div class="row" style="margin-top:10px">
+        <button id="btnActa">Ver acta / guardar</button><button id="btnVerify">Verificar integridad</button><span id="vres" class="note"></span>
+        <button id="btnReset" class="sm">Borrar todo</button>
+      </div>
+      <div class="note">Cada sorteo queda encadenado con una huella SHA-256 (incluye la huella del sorteo anterior). Si alguien altera un resultado, la cadena deja de coincidir.</div>
+    </section>
+  </main>
+</div>
+
+<div class="ov" id="ov"><div class="box" id="ovBox"></div></div>
+
+<script>
+'use strict';
+// ---------- estado ----------
+const KEY='cabildo-sorteo-v1';
+const COMUNAS=['Popular','Santa Cruz','Manrique','Aranjuez','Castilla','Doce de Octubre','Robledo','Villa Hermosa','Buenos Aires','La Candelaria','Laureles-Estadio','La América','San Javier','El Poblado','Guayabal','Belén','San Sebastián de Palmitas','San Cristóbal','Altavista','San Antonio de Prado','Santa Elena','Dormitorio','Colonia','CVG','Pensionados'];
+let S={zones:[],log:[],sel:null};
+try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}
+for(const n of COMUNAS){if(S.zones.length&&!S.zones.some(z=>z.name===n))S.zones.push({id:'z'+Date.now()+Math.random().toString(36).slice(2,6),name:n,cands:[],result:null})}
+if(!S.zones.length){S.zones=COMUNAS.map((n,i)=>({id:'z'+i,name:n,cands:[],result:null}));S.sel=S.zones[0].id}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const zone=()=>S.zones.find(z=>z.id===S.sel)||S.zones[0];
+let busy=false;
+
+// ---------- aleatoriedad ----------
+function rnd(n){ // entero uniforme en [0,n) sin sesgo (rechazo)
+  const lim=Math.floor(4294967296/n)*n,a=new Uint32Array(1);let x;
+  do{crypto.getRandomValues(a);x=a[0]}while(x>=lim);
+  return x%n;
+}
+async function sha(s){
+  try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
+    return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+  catch(e){return 'sin-sha-'+s.length}
+}
+
+// ---------- UI lista ----------
+function renderList(){
+  $('zlist').innerHTML=S.zones.map(z=>{
+    const st=z.result?'done':(z.cands.length?'ready':'');
+    return `<div class="z ${z.id===S.sel?'sel':''}" data-id="${z.id}"><span class="dot ${st}"></span>${esc(z.name)}<span class="n">${z.cands.length}</span></div>`}).join('');
+  document.querySelectorAll('.z').forEach(e=>e.onclick=()=>{if(busy)return;S.sel=e.dataset.id;save();renderAll()});
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ---------- panel de zona ----------
+function renderPanel(){
+  const z=zone();
+  const locked=!!z.result;
+  const idx=S.zones.indexOf(z),done=S.zones.filter(x=>x.result).length;
+  $('panel').innerHTML=`
+  <div class="row" style="justify-content:space-between;margin-bottom:10px">
+    <div class="row"><button id="prevZ" class="sm" ${busy?'disabled':''}>←</button><h2 class="zt" style="margin:0">${esc(z.name)}</h2><button id="nextZ" class="sm" ${busy?'disabled':''}>→</button><span class="note">Zona ${idx+1} de ${S.zones.length} · ${done} sorteada(s)</span></div>
+    ${locked?'<span class="tag ok">Sorteo realizado</span>':`<span class="tag">${z.cands.length} candidato(s)</span>`}
+  </div>
+  <div class="grid2">
+    <div class="editcol">
+      <label class="note">Candidatos inscritos (uno por línea)</label>
+      <textarea id="cands" ${locked?'disabled':''} placeholder="Nombre completo del candidato">${esc(z.cands.join('\n'))}</textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="saveC" ${locked?'disabled':''}>Guardar candidatos</button>
+        ${locked?'<button id="annul" class="sm">Anular sorteo…</button>':''}
+      </div>
+      <div id="annulBox"></div>
+      <div class="note">El <b>Voto en Blanco</b> se agrega siempre al final de la tarjeta y no entra a la balotera. Con un solo candidato igual se hace el sorteo para validar el sistema.</div>
+    </div>
+    <div class="stage">
+      <canvas id="drum" width="300" height="300"></canvas>
+      <div class="status" id="status">${locked?'Sorteo realizado ✔ · siguiente zona con el botón →':(z.cands.length?'Listo para sortear.':'Agrega candidatos para comenzar.')}</div>
+      <button id="go" class="pri" ${locked||!z.cands.length||busy?'disabled':''}>🎱 Sortear esta zona</button>
+    </div>
+    <div class="ballotWrap">
+      <h2>Tarjeta electoral</h2>
+      <div class="ballot" id="ballot"></div>
+      ${locked?`<div class="note">Huella: <code>${z.result.hash.slice(0,32)}…</code> · ${new Date(z.result.ts).toLocaleString('es-CO')}</div>`:''}
+    </div>
+  </div>`;
+  renderBallot(z.result?z.result.order:[],z.result?z.cands.length:0);
+  $('saveC')&&($('saveC').onclick=()=>{
+    const arr=[...new Set($('cands').value.split('\n').map(s=>s.trim()).filter(Boolean))];
+    z.cands=arr;save();renderAll()});
+  $('go')&&($('go').onclick=()=>{const t=$('cands');if(t)z.cands=[...new Set(t.value.split('\n').map(x=>x.trim()).filter(Boolean))];save();runZone(z)});
+  $('prevZ').onclick=()=>navZone(-1);$('nextZ').onclick=()=>navZone(1);
+  $('annul')&&($('annul').onclick=()=>{
+    $('annulBox').innerHTML='<input type="text" id="why" placeholder="Motivo de la anulación (queda en el registro)" style="margin-top:8px"><button id="okAnnul" class="sm" style="margin-top:6px">Confirmar anulación</button>';
+    $('okAnnul').onclick=async()=>{const w=$('why').value.trim();if(!w){$('why').focus();return}
+      await addLog({type:'ANULADO',zone:z.name,reason:w,target:z.result.hash});
+      z.result=null;save();renderAll()};
+  });
+  initDrum(z.cands.length&&!locked?z.cands.length:0);
+}
+function renderBallot(order,n){
+  const b=$('ballot');
+  if(!order.length){b.innerHTML='<div class="hd">TARJETA ELECTORAL</div><div class="empty">El orden aparecerá aquí a medida que salgan las balotas.</div>';return}
+  b.innerHTML='<div class="hd">TARJETA ELECTORAL</div>'+order.map((o,i)=>
+    `<div class="it"><span class="pos">${i+1}</span><span class="nm">${esc(o.name)}</span><span class="bn">balota #${o.ball}</span></div>`).join('')+
+    (order.length===n?`<div class="it blank"><span class="pos">${n+1}</span><span class="nm">Voto en Blanco</span><span class="bn">posición fija</span></div>`:'');
+}
+
+// ---------- balotera (canvas) ----------
+let balls=[],raf=0,speed=1.5,hl=-1;
+const HUES=[210,0,45,140,280,25,170,330];
+function initDrum(n){
+  cancelAnimationFrame(raf);
+  const c=$('drum');if(!c)return;
+  const R=150,r=n>40?9:n>20?12:16;
+  balls=[...Array(n)].map((_,i)=>{const a=Math.random()*6.28,d=Math.random()*(R-r-6);
+    return{n:i+1,x:R+Math.cos(a)*d,y:R+Math.sin(a)*d,vx:(Math.random()-.5)*3,vy:(Math.random()-.5)*3,r,h:HUES[i%HUES.length]}});
+  hl=-1;
+  const ctx=c.getContext('2d');
+  (function loop(){
+    ctx.clearRect(0,0,300,300);
+    for(const b of balls){
+      b.vx+=(Math.random()-.5)*.25*speed;b.vy+=(Math.random()-.5)*.25*speed+.03;
+      const v=Math.hypot(b.vx,b.vy),t=2.2*speed;if(v>t){b.vx*=t/v;b.vy*=t/v}
+      b.x+=b.vx*speed;b.y+=b.vy*speed;
+      const dx=b.x-R,dy=b.y-R,d=Math.hypot(dx,dy);
+      if(d+b.r>R-2){const nx=dx/d,ny=dy/d,dot=b.vx*nx+b.vy*ny;b.vx-=2*dot*nx;b.vy-=2*dot*ny;b.x=R+nx*(R-2-b.r);b.y=R+ny*(R-2-b.r)}
+    }
+    // separación simple entre balotas
+    for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
+      const a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),m=a.r+b.r;
+      if(d>0&&d<m){const p=(m-d)/2,nx=dx/d,ny=dy/d;a.x-=nx*p;a.y-=ny*p;b.x+=nx*p;b.y+=ny*p;[a.vx,b.vx]=[b.vx,a.vx];[a.vy,b.vy]=[b.vy,a.vy]}}
+    for(const b of balls){
+      ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,6.283);
+      ctx.fillStyle=`hsl(${b.h} 70% 52%)`;ctx.fill();
+      ctx.lineWidth=b.n===hl?4:1.5;ctx.strokeStyle=b.n===hl?'#111':'#fff';ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font=`bold ${Math.max(9,b.r-3)}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(b.n,b.x,b.y+1);
+    }
+    raf=requestAnimationFrame(loop);
+  })();
+}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+
+// ---------- sorteo ----------
+async function runZone(z,quiet){
+  if(busy||z.result||!z.cands.length)return;
+  busy=true;$('go')&&($('go').disabled=true);
+  const st=$('status');
+  const pool=z.cands.map((name,i)=>({name,ball:i+1}));
+  const order=[];
+  renderBallot([],z.cands.length);
+  while(pool.length){
+    st.textContent=`Mezclando balotas… (posición ${order.length+1} de ${z.cands.length})`;
+    speed=3.2;await wait(quiet?500:1600);
+    const pick=pool.splice(rnd(pool.length),1)[0];
+    speed=.5;hl=pick.ball;st.textContent=`Salió la balota #${pick.ball}`;
+    await wait(quiet?300:1000);
+    balls=balls.filter(b=>b.n!==pick.ball);hl=-1;
+    order.push(pick);renderBallot(order,z.cands.length);speed=1.5;
+    await wait(quiet?150:500);
+  }
+  const ts=new Date().toISOString();
+  const prev=S.log.length?S.log[S.log.length-1].hash:'GENESIS';
+  const payload={type:'SORTEO',zone:z.name,cands:z.cands,order:order.map(o=>o.name),ts};
+  const hash=await sha(prev+JSON.stringify(payload));
+  z.result={order,ts,hash};
+  S.log.push({...payload,prev,hash});save();
+  st.textContent='Sorteo completado ✔';
+  busy=false;
+  if(!quiet)renderAll();
+}
+async function addLog(p){
+  const prev=S.log.length?S.log[S.log.length-1].hash:'GENESIS';
+  const ts=new Date().toISOString();const q={...p,ts};
+  const hash=await sha(prev+JSON.stringify(q));
+  S.log.push({...q,prev,hash});save();
+}
+function renderLog(){
+  $('log').textContent=S.log.length?S.log.map((l,i)=>
+    `#${i+1} ${l.ts}\n${l.type} · ${l.zone}`+(l.order?`\n  orden: ${l.order.map((n,k)=>(k+1)+'. '+n).join(' | ')} | Voto en Blanco`:'')+(l.reason?`\n  motivo: ${l.reason}`:'')+`\n  sha256: ${l.hash}\n`).join('\n'):'Sin sorteos todavía.';
+  $('log').scrollTop=$('log').scrollHeight;
+}
+function renderAll(){renderList();renderPanel();renderLog()}
+
+// ---------- globales ----------
+$('addZone').onclick=()=>{const v=$('newZone').value.trim();if(!v)return;
+  S.zones.push({id:'z'+Date.now(),name:v,cands:[],result:null});$('newZone').value='';save();renderAll()};
+$('doBulk').onclick=()=>{
+  for(const line of $('bulk').value.split('\n')){
+    const m=line.split(/[;\t]/);if(m.length<2)continue;
+    const zn=m[0].trim().toLowerCase(),nm=m.slice(1).join(' ').trim();if(!nm)continue;
+    let z=S.zones.find(x=>x.name.toLowerCase()===zn);
+    if(!z){z={id:'z'+Date.now()+Math.random(),name:m[0].trim(),cands:[],result:null};S.zones.push(z)}
+    if(!z.result&&!z.cands.includes(nm))z.cands.push(nm);
+  }
+  $('bulk').value='';save();renderAll()};
+$('demo').onclick=()=>{
+  const d={'Popular':4,'Santa Cruz':1,'Manrique':6,'Aranjuez':3};
+  for(const k in d){const z=S.zones.find(x=>x.name===k);if(z&&!z.result)z.cands=[...Array(d[k])].map((_,i)=>`Candidato de prueba ${i+1}`)}
+  save();renderAll()};
+$('btnAll').onclick=async()=>{
+  if(busy)return;
+  for(const z of S.zones){if(!z.result&&z.cands.length){S.sel=z.id;save();renderAll();await wait(200);await runZone(z,true)}}
+  renderAll()};
+function navZone(d){if(busy)return;const i=S.zones.findIndex(z=>z.id===S.sel)+d;if(i<0||i>=S.zones.length)return;S.sel=S.zones[i].id;save();renderAll()}
+let DL=null;
+try{window.claude&&window.claude.use('downloads').then(d=>{DL=d}).catch(()=>{})}catch(e){}
+const fecha=()=>new Date().toLocaleDateString('sv-SE');
+function buildActa(){
+  const lines=['ACTA DE SORTEO – ORDEN DE TARJETA ELECTORAL – CABILDO MAYOR',''];
+  S.zones.filter(z=>z.result).forEach(z=>{
+    lines.push(`${z.name}  (${new Date(z.result.ts).toLocaleString('es-CO')})`);
+    z.result.order.forEach((o,i)=>lines.push(`  ${i+1}. ${o.name}  (balota #${o.ball})`));
+    lines.push(`  ${z.result.order.length+1}. Voto en Blanco`);
+    lines.push(`  huella: ${z.result.hash}`,'');
+  });
+  if(lines.length===2)lines.push('Aún no hay sorteos realizados.');
+  return lines.join('\n');
+}
+function buildCsv(){
+  const rows=[['zona','posicion','candidato','numero_balota','fecha_hora','huella_sha256']];
+  S.zones.filter(z=>z.result).forEach(z=>{
+    z.result.order.forEach((o,i)=>rows.push([z.name,i+1,o.name,o.ball,z.result.ts,z.result.hash]));
+    rows.push([z.name,z.result.order.length+1,'Voto en Blanco','',z.result.ts,z.result.hash])});
+  return '\ufeff'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+}
+const buildBackup=()=>JSON.stringify({app:'sorteo-cabildo',v:1,saved:new Date().toISOString(),state:S},null,1);
+async function saveFile(name,data){
+  const m=$('svMsg');
+  if(!DL){ // fuera de Claude (p. ej. GitHub Pages): descarga normal del navegador
+    try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'text/plain;charset=utf-8'}));a.download=name;document.body.appendChild(a);a.click();a.remove();m.textContent='Descargado ✔ '+name}
+    catch(e){m.textContent='No se pudo descargar; usa «Copiar acta».'}
+    return}
+  try{await DL.save({filename:name,data});m.textContent='Guardado ✔ '+name}
+  catch(e){m.textContent=(e&&e.code==='declined')?'Cancelado.':'No se pudo guardar ('+((e&&e.code)||'error')+').'}
+}
+function openSave(){
+  const txt=buildActa();
+  $('ovBox').innerHTML=`<h2 style="margin-top:0">Guardar resultados</h2>
+  <div class="row"><button id="sA" class="pri">Acta (.txt)</button><button id="sC">Tabla (.csv · Excel)</button><button id="sB">Respaldo (.json)</button><button id="sCp">Copiar acta</button></div>
+  <div id="svMsg" class="note" style="margin:8px 0">El respaldo .json permite recuperar todo (candidatos, resultados y registro) si se pierde el navegador.</div>
+  <textarea id="actaT" readonly style="min-height:220px">${esc(txt)}</textarea>
+  <details><summary>Cargar un respaldo anterior</summary><input type="file" id="fRest" accept=".json,application/json"><div id="restMsg" class="note"></div></details>
+  <div class="row" style="margin-top:8px"><button id="cl">Cerrar</button></div>`;
+  $('ov').classList.add('on');
+  $('cl').onclick=()=>$('ov').classList.remove('on');
+  $('sA').onclick=()=>saveFile(`acta-sorteo-cabildo-${fecha()}.txt`,buildActa());
+  $('sC').onclick=()=>saveFile(`sorteo-cabildo-${fecha()}.csv`,buildCsv());
+  $('sB').onclick=()=>saveFile(`respaldo-sorteo-cabildo-${fecha()}.json`,buildBackup());
+  $('sCp').onclick=async()=>{try{await navigator.clipboard.writeText(txt);$('svMsg').textContent='Copiado ✔'}catch(e){$('actaT').select();$('svMsg').textContent='Selecciona y copia con Ctrl+C'}};
+  $('fRest').onchange=async ev=>{
+    const f=ev.target.files[0];if(!f)return;
+    try{
+      const j=JSON.parse(await f.text());if(!j.state||!Array.isArray(j.state.zones))throw 0;
+      $('restMsg').innerHTML=`El respaldo tiene ${j.state.zones.length} zonas, ${j.state.zones.filter(z=>z.result).length} sorteadas. <button id="doRest" class="sm">Reemplazar lo actual</button>`;
+      $('doRest').onclick=()=>{S=j.state;S.log=S.log||[];S.sel=S.zones[0].id;save();$('ov').classList.remove('on');renderAll()};
+    }catch(e){$('restMsg').textContent='Archivo no válido.'}
+  };
+}
+$('btnActa').onclick=openSave;$('btnSave').onclick=openSave;
+$('btnVerify').onclick=async()=>{
+  let prev='GENESIS',bad=0;
+  for(let i=0;i<S.log.length&&!bad;i++){
+    const {prev:p,hash,...rest}=S.log[i];
+    if(p!==prev||await sha(prev+JSON.stringify(rest))!==hash)bad=i+1;
+    prev=hash;
+  }
+  $('vres').textContent=bad?`⚠ La cadena falla en el registro #${bad}`:`✔ ${S.log.length} registro(s) íntegros`;
+};
+$('btnPres').onclick=async()=>{
+  const on=document.body.classList.toggle('pres');
+  $('btnPres').textContent=on?'✕ Salir de proyección':'🖥 Modo proyección';
+  try{if(on)await document.documentElement.requestFullscreen();else if(document.fullscreenElement)await document.exitFullscreen()}catch(e){}
+};
+document.addEventListener('keydown',e=>{
+  const t=document.activeElement.tagName;
+  if(t==='INPUT'||t==='TEXTAREA'||$('ov').classList.contains('on'))return;
+  if(e.key==='ArrowRight')navZone(1);
+  else if(e.key==='ArrowLeft')navZone(-1);
+  else if(e.key==='Enter'||e.key===' '){
+    if(t==='BUTTON'&&document.activeElement.id!=='go')return;
+    const g=$('go');if(g&&!g.disabled){e.preventDefault();g.click()}
+  }
+});
+$('btnReset').onclick=()=>{
+  $('ovBox').innerHTML='<h2 style="margin-top:0">¿Borrar todo?</h2><p>Se eliminan candidatos, resultados y el registro de auditoría de este navegador.</p><div class="row"><button id="yes" class="pri">Sí, borrar</button><button id="no">Cancelar</button></div>';
+  $('ov').classList.add('on');$('no').onclick=()=>$('ov').classList.remove('on');
+  $('yes').onclick=()=>{try{localStorage.removeItem(KEY)}catch(e){}S={zones:COMUNAS.map((n,i)=>({id:'z'+i,name:n,cands:[],result:null})),log:[],sel:'z0'};$('ov').classList.remove('on');renderAll()};
+};
+renderAll();
+</script>
+</body>
+</html>
