@@ -137,7 +137,7 @@ body.pres .zt{font-size:30px;text-transform:none;letter-spacing:0;color:var(--in
 'use strict';
 // ---------- estado ----------
 const KEY='cabildo-sorteo-v1';
-const COMUNAS=['Popular','Santa Cruz','Manrique','Aranjuez','Castilla','Doce de Octubre','Robledo','Villa Hermosa','Buenos Aires','La Candelaria','Laureles-Estadio','La América','San Javier','El Poblado','Guayabal','Belén','San Sebastián de Palmitas','San Cristóbal','Altavista','San Antonio de Prado','Santa Elena','Dormitorio','Colonia','CVG','Pensionados'];
+const COMUNAS=['Popular','Santa Cruz','Manrique','Aranjuez','Castilla','Doce de Octubre','Robledo','Villa Hermosa','Buenos Aires','La Candelaria','Laureles-Estadio','La América','San Javier','El Poblado','Guayabal','Belén','Corregimiento San Sebastián de Palmitas',' Corregimiento San Cristóbal','Corregimiento Altavista','Corregimiento San Antonio de Prado','Corregimiento Santa Elena','Dormitorio Social','Colonia Belencito','Larga Estancia','Pensionados y Jubilados'];
 let S={zones:[],log:[],sel:null};
 try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}
 for(const n of COMUNAS){if(S.zones.length&&!S.zones.some(z=>z.name===n))S.zones.push({id:'z'+Date.now()+Math.random().toString(36).slice(2,6),name:n,cands:[],result:null})}
